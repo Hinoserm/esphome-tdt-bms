@@ -13,6 +13,9 @@ class TdtBmsPackSensor : public TdtBmsListener {
  public:
   explicit TdtBmsPackSensor(uint8_t pack) : pack_(pack) {}
 
+  uint8_t get_pack() const override { return this->pack_; }
+  bool wants_analog() const override { return this->any_sensor_set_(); }
+
   void on_analog_data(uint8_t pack, const AnalogFrame &data) override;
   void on_pack_offline(uint8_t pack) override;
   void dump_config() override;
@@ -40,8 +43,12 @@ class TdtBmsPackSensor : public TdtBmsListener {
   SUB_SENSOR(max_cell_voltage)
   SUB_SENSOR(cell_voltage_delta)
   SUB_SENSOR(avg_cell_voltage)
+  SUB_SENSOR(temperature_high)
+  SUB_SENSOR(temperature_low)
 
  protected:
+  bool any_sensor_set_() const;
+
   uint8_t pack_;
   sensor::Sensor *cell_voltage_sensors_[MAX_CELLS]{nullptr};
   sensor::Sensor *temperature_sensors_[MAX_TEMPS]{nullptr};

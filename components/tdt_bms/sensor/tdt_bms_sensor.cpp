@@ -17,6 +17,23 @@ static inline void publish_nan(sensor::Sensor *s) {
   if (s != nullptr) s->publish_state(NAN);
 }
 
+bool TdtBmsPackSensor::any_sensor_set_() const {
+  if (this->pack_voltage_sensor_ || this->pack_current_sensor_ ||
+      this->pack_power_sensor_ || this->cpu_voltage_sensor_ ||
+      this->remaining_capacity_sensor_ || this->full_capacity_sensor_ ||
+      this->design_capacity_sensor_ || this->cycle_count_sensor_ ||
+      this->state_of_charge_sensor_ || this->state_of_health_sensor_ ||
+      this->insulation_resistance_sensor_ || this->bms_self_consumption_sensor_ ||
+      this->min_cell_voltage_sensor_ || this->max_cell_voltage_sensor_ ||
+      this->cell_voltage_delta_sensor_ || this->avg_cell_voltage_sensor_ ||
+      this->temperature_high_sensor_ || this->temperature_low_sensor_) {
+    return true;
+  }
+  for (auto *s : this->cell_voltage_sensors_) if (s) return true;
+  for (auto *s : this->temperature_sensors_) if (s) return true;
+  return false;
+}
+
 void TdtBmsPackSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
   if (pack != this->pack_) return;
 
@@ -47,6 +64,10 @@ void TdtBmsPackSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
   for (uint8_t i = 0; i < data.temp_num && i < MAX_TEMPS; i++) {
     publish(this->temperature_sensors_[i], data.temp_C[i]);
   }
+  if (data.temp_num > 0) {
+    publish(this->temperature_high_sensor_, data.temperature_high_C);
+    publish(this->temperature_low_sensor_, data.temperature_low_C);
+  }
 }
 
 void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
@@ -68,6 +89,8 @@ void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
   publish_nan(this->max_cell_voltage_sensor_);
   publish_nan(this->cell_voltage_delta_sensor_);
   publish_nan(this->avg_cell_voltage_sensor_);
+  publish_nan(this->temperature_high_sensor_);
+  publish_nan(this->temperature_low_sensor_);
   for (auto *s : this->cell_voltage_sensors_) publish_nan(s);
   for (auto *s : this->temperature_sensors_) publish_nan(s);
 }
@@ -90,6 +113,8 @@ void TdtBmsPackSensor::dump_config() {
   LOG_SENSOR("  ", "Max Cell Voltage", this->max_cell_voltage_sensor_);
   LOG_SENSOR("  ", "Cell Voltage Delta", this->cell_voltage_delta_sensor_);
   LOG_SENSOR("  ", "Average Cell Voltage", this->avg_cell_voltage_sensor_);
+  LOG_SENSOR("  ", "Temperature High", this->temperature_high_sensor_);
+  LOG_SENSOR("  ", "Temperature Low", this->temperature_low_sensor_);
   for (uint8_t i = 0; i < MAX_CELLS; i++) {
     if (this->cell_voltage_sensors_[i] != nullptr) {
       LOG_SENSOR("  ", "Cell Voltage", this->cell_voltage_sensors_[i]);

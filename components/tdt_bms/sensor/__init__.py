@@ -143,6 +143,21 @@ SENSORS = {
         device_class=DEVICE_CLASS_VOLTAGE,
         state_class=STATE_CLASS_MEASUREMENT,
     ),
+    # Highest and lowest of the per-sensor temperature readings currently
+    # observed in the pack. The high reading is the hot-spot for thermal
+    # alerting; the low reading flags cells that may be running cold.
+    "temperature_high": dict(
+        unit_of_measurement=UNIT_CELSIUS,
+        accuracy_decimals=1,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    "temperature_low": dict(
+        unit_of_measurement=UNIT_CELSIUS,
+        accuracy_decimals=1,
+        device_class=DEVICE_CLASS_TEMPERATURE,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
 }
 
 CELLS = [f"cell_voltage_{i}" for i in range(1, 17)]

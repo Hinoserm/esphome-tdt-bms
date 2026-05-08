@@ -87,6 +87,13 @@ struct AnalogFrame {
   uint16_t max_cell_mV;
   uint16_t avg_cell_mV;
   uint16_t delta_cell_mV;
+
+  // Highest and lowest readings across the populated temperature sensors.
+  // `temperature_high` is the warmest current reading (hot-spot for thermal
+  // alerting); `temperature_low` is the coldest. Both are 0 when the pack
+  // reports no temperature sensors.
+  float temperature_high_C;
+  float temperature_low_C;
 };
 
 // Decoded alarm/status (CID2=0x44) data for one pack.

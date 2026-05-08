@@ -1,6 +1,9 @@
 #include "tdt_bms.h"
 
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+
+#include <algorithm>
 
 namespace esphome {
 namespace tdt_bms {
@@ -11,16 +14,82 @@ static const char *const TAG = "tdt_bms";
 static const uint8_t INFO_SUBCMD_01[2] = {'0', '1'};
 
 void TdtBms::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up TDT BMS hub for %u pack(s)", this->pack_count_);
   this->rx_buffer_.reserve(MAX_FRAME_SIZE);
+  this->build_active_polls_();
+}
+
+void TdtBms::build_active_polls_() {
+  this->active_polls_.clear();
+  this->analog_listeners_.clear();
+  this->status_listeners_.clear();
+
+  // Pre-filter listeners by which command they consume, so frame dispatch
+  // doesn't iterate everyone on every reply.
+  for (auto *l : this->listeners_) {
+    if (l->wants_analog()) this->analog_listeners_.push_back(l);
+    if (l->wants_status()) this->status_listeners_.push_back(l);
+  }
+
+  if (this->pack_count_ > 0) {
+    // Explicit override: poll every pack 1..N with both commands regardless
+    // of which listeners consume the responses.
+    for (uint8_t p = 1; p <= this->pack_count_; p++) {
+      this->active_polls_.push_back({p, CID2_ANALOG});
+    }
+    for (uint8_t p = 1; p <= this->pack_count_; p++) {
+      this->active_polls_.push_back({p, CID2_STATUS});
+    }
+    ESP_LOGCONFIG(TAG, "  Polling 1..%u (explicit), %u command(s) per round",
+                  this->pack_count_, unsigned(this->active_polls_.size()));
+    return;
+  }
+
+  // Auto-detect from listeners: only poll packs that have at least one
+  // configured entity, and only send commands that have a consumer.
+  std::vector<uint8_t> packs;
+  for (auto *l : this->listeners_) {
+    uint8_t p = l->get_pack();
+    if (std::find(packs.begin(), packs.end(), p) == packs.end()) {
+      packs.push_back(p);
+    }
+  }
+  std::sort(packs.begin(), packs.end());
+
+  // Interleave by pack across commands so the same pack isn't queried
+  // twice in immediate succession — back-to-back queries to one pack can
+  // race the BMS's reply path, especially when relayed through the chain.
+  for (uint8_t pack : packs) {
+    for (auto *l : this->listeners_) {
+      if (l->get_pack() == pack && l->wants_analog()) {
+        this->active_polls_.push_back({pack, CID2_ANALOG});
+        break;
+      }
+    }
+  }
+  for (uint8_t pack : packs) {
+    for (auto *l : this->listeners_) {
+      if (l->get_pack() == pack && l->wants_status()) {
+        this->active_polls_.push_back({pack, CID2_STATUS});
+        break;
+      }
+    }
+  }
+
+  ESP_LOGCONFIG(TAG, "  Polling %u pack(s) auto-detected, %u command(s) per round",
+                unsigned(packs.size()), unsigned(this->active_polls_.size()));
 }
 
 void TdtBms::dump_config() {
   ESP_LOGCONFIG(TAG, "TDT BMS:");
-  ESP_LOGCONFIG(TAG, "  Pack count: %u", this->pack_count_);
+  if (this->pack_count_ > 0) {
+    ESP_LOGCONFIG(TAG, "  Pack count (explicit): %u", this->pack_count_);
+  } else {
+    ESP_LOGCONFIG(TAG, "  Pack count: auto-detect from listeners");
+  }
   ESP_LOGCONFIG(TAG, "  Update interval: %u ms", unsigned(this->get_update_interval()));
   ESP_LOGCONFIG(TAG, "  Reply timeout: %u ms", unsigned(REPLY_TIMEOUT_MS));
   ESP_LOGCONFIG(TAG, "  Inter-command gap: %u ms", unsigned(INTER_COMMAND_MS));
+  ESP_LOGCONFIG(TAG, "  Commands per round: %u", unsigned(this->active_polls_.size()));
   this->check_uart_settings(9600);
   for (auto *l : this->listeners_) l->dump_config();
 }
@@ -40,16 +109,8 @@ void TdtBms::update() {
 }
 
 void TdtBms::enqueue_round_() {
-  this->tx_queue_.clear();
+  this->tx_queue_ = this->active_polls_;
   this->tx_queue_head_ = 0;
-  // Analog data first for all packs, then status for all packs. Cells/voltage/SOC
-  // change faster than fault flags so analog gets priority within each round.
-  for (uint8_t p = 1; p <= this->pack_count_; p++) {
-    this->tx_queue_.push_back({p, CID2_ANALOG});
-  }
-  for (uint8_t p = 1; p <= this->pack_count_; p++) {
-    this->tx_queue_.push_back({p, CID2_STATUS});
-  }
 }
 
 void TdtBms::try_send_next_() {
@@ -71,8 +132,9 @@ void TdtBms::try_send_next_() {
   this->awaiting_reply_ = true;
   this->request_sent_at_ = now;
 
-  ESP_LOGV(TAG, "Sent CID2=0x%02X to pack %u (%u bytes on the wire)", req.cid2, req.pack,
-           unsigned(this->tx_buffer_.size()));
+  ESP_LOGD(TAG, "TX pack=%u cid2=0x%02X (%u bytes): %s", req.pack, req.cid2,
+           unsigned(this->tx_buffer_.size()),
+           format_hex_pretty(this->tx_buffer_.data(), this->tx_buffer_.size()).c_str());
 }
 
 void TdtBms::loop() {
@@ -152,7 +214,7 @@ void TdtBms::handle_complete_frame_() {
     AnalogFrame data{};
     if (parse_analog(hdr.info, hdr.info_chars, this->bms_mode_f_, data)) {
       this->mark_response_received_(hdr.target_addr);
-      for (auto *l : this->listeners_) l->on_analog_data(hdr.target_addr, data);
+      for (auto *l : this->analog_listeners_) l->on_analog_data(hdr.target_addr, data);
       parsed = true;
     } else {
       ESP_LOGW(TAG, "Pack %u: analog parse failed", hdr.target_addr);
@@ -161,7 +223,7 @@ void TdtBms::handle_complete_frame_() {
     StatusFrame data{};
     if (parse_status(hdr.info, hdr.info_chars, data)) {
       this->mark_response_received_(hdr.target_addr);
-      for (auto *l : this->listeners_) l->on_status_data(hdr.target_addr, data);
+      for (auto *l : this->status_listeners_) l->on_status_data(hdr.target_addr, data);
       parsed = true;
     } else {
       ESP_LOGW(TAG, "Pack %u: status parse failed", hdr.target_addr);

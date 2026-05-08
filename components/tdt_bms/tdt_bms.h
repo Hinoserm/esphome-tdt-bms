@@ -14,6 +14,16 @@ namespace tdt_bms {
 // a specific pack number; the listener filters broadcasts internally.
 class TdtBmsListener {
  public:
+  // Identifies which pack address this listener is bound to.
+  virtual uint8_t get_pack() const = 0;
+
+  // Whether this listener consumes analog (CID2=0x42) or status (CID2=0x44)
+  // responses. The hub uses these to decide which commands are worth sending
+  // for this listener's pack — if no listener for a given pack wants a given
+  // command, that command is skipped each polling round.
+  virtual bool wants_analog() const { return false; }
+  virtual bool wants_status() const { return false; }
+
   virtual void on_analog_data(uint8_t pack, const AnalogFrame &data) {}
   virtual void on_status_data(uint8_t pack, const StatusFrame &data) {}
   virtual void on_pack_online(uint8_t pack) {}
@@ -56,6 +66,7 @@ class TdtBms : public PollingComponent, public uart::UARTDevice {
     uint8_t cid2;
   };
 
+  void build_active_polls_();
   void enqueue_round_();
   void try_send_next_();
   bool parse_byte_(uint8_t b);
@@ -64,12 +75,25 @@ class TdtBms : public PollingComponent, public uart::UARTDevice {
   void mark_response_received_(uint8_t pack);
   void mark_response_missed_(uint8_t pack);
 
-  uint8_t pack_count_{1};
+  // Explicit override: when 0, the active pack list is derived from the set
+  // of pack numbers registered by listeners. When non-zero, packs 1..pack_count_
+  // are polled with both analog and status commands regardless of listeners.
+  uint8_t pack_count_{0};
   uint16_t bms_mode_f_{0};   // Read from CID2=0xC1 once at boot; gates current scale.
 
   std::vector<TdtBmsListener *> listeners_;
 
+  // Pre-filtered subsets of listeners_ populated at setup() time so dispatch
+  // doesn't iterate every listener on every frame.
+  std::vector<TdtBmsListener *> analog_listeners_;
+  std::vector<TdtBmsListener *> status_listeners_;
+
+  // Static list of (pack, cid2) tuples to poll each round, computed once at
+  // setup() from the listener registrations.
+  std::vector<TxRequest> active_polls_;
+
   // TX queue: a flat list of pending (pack, cid2) pairs for the current burst.
+  // Refilled from active_polls_ at the start of each round.
   std::vector<TxRequest> tx_queue_;
   size_t tx_queue_head_{0};
 

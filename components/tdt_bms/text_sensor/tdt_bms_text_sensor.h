@@ -13,6 +13,13 @@ class TdtBmsPackTextSensor : public TdtBmsListener {
  public:
   explicit TdtBmsPackTextSensor(uint8_t pack) : pack_(pack) {}
 
+  uint8_t get_pack() const override { return this->pack_; }
+  bool wants_status() const override {
+    return this->battery_mode_ || this->chemistry_ ||
+           this->active_protections_ || this->active_warnings_ ||
+           this->active_faults_;
+  }
+
   void on_status_data(uint8_t pack, const StatusFrame &data) override;
   void on_pack_offline(uint8_t pack) override;
   void dump_config() override;

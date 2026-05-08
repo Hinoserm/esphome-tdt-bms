@@ -1,7 +1,7 @@
 # Reference ESPHome configuration for esphome-tdt-bms.
 #
 # Hardware: any ESP32 / ESP32-S3 with a hardware UART wired to the BMS console
-# port via an RS-232 level shifter and null-modem adapter. 9600 8N1.
+# port via an RS-232 level shifter. 9600 8N1.
 #
 # Provide your own secrets in a secrets.yaml alongside this file:
 #   wifi_ssid: "..."
@@ -18,10 +18,20 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  board: esp32dev
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      # Required when the BMS UART lands on UART Bus 0 (i.e. it's the first
+      # `uart:` entry). The IDF bootloader otherwise pre-configures UART0 for
+      # console output, leaving IOMUX state that corrupts the first frame the
+      # BMS sees and silences the chain. Both flags are needed on S3.
+      CONFIG_ESP_CONSOLE_NONE: y
+      CONFIG_ESP_CONSOLE_SECONDARY_NONE: y
 
 logger:
   level: INFO
+  hardware_uart: USB_SERIAL_JTAG
 
 api:
   encryption:
@@ -49,8 +59,9 @@ uart:
 tdt_bms:
   id: bms
   uart_id: bms_uart
-  packs: 2
   update_interval: 5s
+  # packs: 2            # optional explicit override; otherwise auto-detected
+  #                       from the pack numbers referenced by platform entries
 
 # ── Pack 1 ────────────────────────────────────────────────────────────────
 sensor:
@@ -73,6 +84,8 @@ sensor:
     max_cell_voltage: { name: "Pack 1 Max Cell Voltage" }
     cell_voltage_delta: { name: "Pack 1 Cell Voltage Delta" }
     avg_cell_voltage: { name: "Pack 1 Avg Cell Voltage" }
+    temperature_high: { name: "Pack 1 Temperature High" }
+    temperature_low: { name: "Pack 1 Temperature Low" }
     cell_voltage_1:  { name: "Pack 1 Cell 1" }
     cell_voltage_2:  { name: "Pack 1 Cell 2" }
     cell_voltage_3:  { name: "Pack 1 Cell 3" }
@@ -116,6 +129,8 @@ sensor:
     max_cell_voltage: { name: "Pack 2 Max Cell Voltage" }
     cell_voltage_delta: { name: "Pack 2 Cell Voltage Delta" }
     avg_cell_voltage: { name: "Pack 2 Avg Cell Voltage" }
+    temperature_high: { name: "Pack 2 Temperature High" }
+    temperature_low: { name: "Pack 2 Temperature Low" }
     cell_voltage_1:  { name: "Pack 2 Cell 1" }
     cell_voltage_2:  { name: "Pack 2 Cell 2" }
     cell_voltage_3:  { name: "Pack 2 Cell 3" }

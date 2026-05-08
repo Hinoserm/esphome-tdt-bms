@@ -12,6 +12,10 @@ class TdtBmsPackBinarySensor : public TdtBmsListener {
  public:
   explicit TdtBmsPackBinarySensor(uint8_t pack) : pack_(pack) {}
 
+  uint8_t get_pack() const override { return this->pack_; }
+  bool wants_analog() const override;
+  bool wants_status() const override { return this->any_status_sensor_set_(); }
+
   void on_analog_data(uint8_t pack, const AnalogFrame &data) override;
   void on_status_data(uint8_t pack, const StatusFrame &data) override;
   void on_pack_online(uint8_t pack) override;
@@ -30,6 +34,8 @@ class TdtBmsPackBinarySensor : public TdtBmsListener {
   void set_online_binary_sensor(binary_sensor::BinarySensor *s) { online_ = s; }
 
  protected:
+  bool any_status_sensor_set_() const;
+
   uint8_t pack_;
   binary_sensor::BinarySensor *charging_mosfet_{nullptr};
   binary_sensor::BinarySensor *discharging_mosfet_{nullptr};

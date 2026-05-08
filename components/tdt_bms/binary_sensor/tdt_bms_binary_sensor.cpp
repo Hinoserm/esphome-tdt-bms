@@ -11,6 +11,23 @@ static inline void publish(binary_sensor::BinarySensor *s, bool state) {
   if (s != nullptr) s->publish_state(state);
 }
 
+bool TdtBmsPackBinarySensor::any_status_sensor_set_() const {
+  return this->charging_mosfet_ || this->discharging_mosfet_ ||
+         this->heater_ || this->bms_sleeping_ ||
+         this->protection_active_ || this->warning_active_ ||
+         this->fault_active_ || this->low_soc_warning_;
+}
+
+bool TdtBmsPackBinarySensor::wants_analog() const {
+  // balancing_active is derived from analog data.
+  if (this->balancing_active_ != nullptr) return true;
+  // Online tracking needs at least one polled command for the pack. If the
+  // user only wired `online:` on this listener and nothing status-fed, fall
+  // back to wanting analog so the pack still gets polled.
+  if (this->online_ != nullptr && !this->any_status_sensor_set_()) return true;
+  return false;
+}
+
 void TdtBmsPackBinarySensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
   if (pack != this->pack_) return;
   publish(this->balancing_active_, data.balance_bitmap != 0);

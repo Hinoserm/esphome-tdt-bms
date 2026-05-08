@@ -16,10 +16,28 @@ The component is structurally complete and validated against live hardware. Opti
 
 - A TDT-1001 BMS (or compatible variant) with an RS-232 console port. The Humsienk 100 Ah rack-mount LiFePO4 is the validated reference.
 - An ESP32 (or ESP32-S3) with a hardware UART connected to the BMS console port through an RS-232 level shifter (e.g. MAX3232).
-- A null modem adapter between the level shifter and the BMS — the BMS adapter cable is wired DTE.
 - Serial settings: 9600 baud, 8N1, no flow control.
 
 For multi-pack configurations, the master pack holds the RS-232 connection. Slave packs are reached via the inter-pack chain link. The master must be left in its default protocol mode for chain transparency to work.
+
+## ESP32-S3 + ESP-IDF: required sdkconfig
+
+If you're targeting an ESP32-S3 with the ESP-IDF framework, **you must release UART0 from the IDF console subsystem before assigning it to the BMS**, or the BMS won't respond. The IDF bootloader pre-configures UART0 for console output before user code runs; when ESPHome later reroutes UART0 to your BMS pins, leftover IOMUX state corrupts the first serial frame the BMS sees and the BMS goes silent.
+
+```yaml
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP_CONSOLE_NONE: y
+      CONFIG_ESP_CONSOLE_SECONDARY_NONE: y
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG
+```
+
+Both `CONFIG_ESP_CONSOLE_NONE` **and** `CONFIG_ESP_CONSOLE_SECONDARY_NONE` are required — on S3 the secondary console default is still UART0 even after redirecting the primary. You only need this if the BMS UART is the first `uart:` entry (i.e. allocated to Bus 0). If you have another UART declared first (e.g. an inverter component on a different UART), the BMS UART naturally lands on Bus 1 and these flags aren't needed.
 
 ## Installation
 
@@ -44,8 +62,9 @@ uart:
 tdt_bms:
   id: bms
   uart_id: bms_uart
-  packs: 2              # number of chained packs to poll (1..16)
   update_interval: 5s
+  # packs: 2            # optional override; otherwise auto-detected from
+  #                       the pack numbers referenced in your platform entries
 
 sensor:
   - platform: tdt_bms
@@ -82,7 +101,7 @@ See [`example.yaml`](example.yaml) for a full reference covering both packs and 
 
 ### `sensor:` (numeric)
 
-**Pack-level**: `pack_voltage`, `pack_current`, `pack_power`, `cpu_voltage`, `remaining_capacity`, `full_capacity`, `design_capacity`, `cycle_count`, `state_of_charge`, `state_of_health`, `insulation_resistance`, `bms_self_consumption`, `min_cell_voltage`, `max_cell_voltage`, `cell_voltage_delta`, `avg_cell_voltage`
+**Pack-level**: `pack_voltage`, `pack_current`, `pack_power`, `cpu_voltage`, `remaining_capacity`, `full_capacity`, `design_capacity`, `cycle_count`, `state_of_charge`, `state_of_health`, `insulation_resistance`, `bms_self_consumption`, `min_cell_voltage`, `max_cell_voltage`, `cell_voltage_delta`, `avg_cell_voltage`, `temperature_high`, `temperature_low`
 
 **Per-cell**: `cell_voltage_1` … `cell_voltage_16`
 
@@ -100,7 +119,8 @@ See [`example.yaml`](example.yaml) for a full reference covering both packs and 
 
 ## Notes
 
-- **Polling cadence**: each `update_interval` tick enqueues one analog query and one status query for every configured pack. With 2 packs at the default 5 s interval, each pack refreshes roughly every 5 s. For larger chains, raise the interval so the bus has time to drain between rounds.
+- **Auto-detect packs**: if `packs:` isn't set on the hub, the active pack list is derived from the `pack:` numbers used in your `sensor:` / `binary_sensor:` / `text_sensor:` entries. Only those packs are polled, and only commands with a consumer are sent — e.g. if no `binary_sensor` or `text_sensor` is configured for a pack, the alarm/status query for that pack is skipped entirely.
+- **Polling cadence**: each `update_interval` tick enqueues the analog query (for sensor consumers) and the status query (for binary_sensor / text_sensor consumers) for every active pack. With 2 packs at the default 5 s interval, each pack refreshes roughly every 5 s. For larger chains, raise the interval so the bus has time to drain between rounds.
 - **Temperature offset**: the BMS firmware reports temperatures as `(K × 10 − 2730)`. Readings sit ~0.5 °C below a calibrated reference; subtract 0.5 in your dashboard if precision matters.
 - **Online status**: a pack that fails to respond for 3 consecutive update cycles is marked offline; its sensors publish `NaN` (numeric) or `false` (binary) until it returns.
 - **Insulation resistance**: open-circuit reads sit near 655 MΩ. Values below ~100 kΩ indicate a developing insulation fault and are worth alerting on.

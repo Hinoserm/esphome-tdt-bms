@@ -146,12 +146,25 @@ bool parse_analog(const uint8_t *info, size_t info_chars, uint16_t bms_mode_f, A
   out.temp_num = temp_num;
 
   if (o + size_t(temp_num) * 4 > info_chars) return false;
+  float hottest = 0.0f;
+  float coldest = 0.0f;
+  bool have_temp = false;
   for (uint8_t i = 0; i < temp_num; i++) {
     uint16_t v = read_word(info, o); o += 4;
     // Kelvin offset 2730 (= 273.0 K). Some firmware variants use 2731 or 2731.5;
     // sensors will read ~0.5°C low compared to a calibrated reference.
-    out.temp_C[i] = float(int(v) - 2730) * 0.1f;
+    float c = float(int(v) - 2730) * 0.1f;
+    out.temp_C[i] = c;
+    if (!have_temp) {
+      hottest = coldest = c;
+      have_temp = true;
+    } else {
+      if (c > hottest) hottest = c;
+      if (c < coldest) coldest = c;
+    }
   }
+  out.temperature_high_C = have_temp ? hottest : 0.0f;
+  out.temperature_low_C = have_temp ? coldest : 0.0f;
 
   if (o + 4 > info_chars) return false;
   // Current scale is gated on BMS_MODE_F bit 0. Default firmware reports cA (0.01 A).

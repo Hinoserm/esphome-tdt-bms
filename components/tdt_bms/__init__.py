@@ -33,7 +33,14 @@ CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(TdtBms),
-            cv.Optional(CONF_PACKS, default=1): cv.int_range(min=1, max=16),
+            # Optional explicit override. When omitted, the hub auto-detects
+            # the active pack list and required commands from the registered
+            # sensor / binary_sensor / text_sensor platform entries: each pack
+            # is polled only if at least one entity references it, and each
+            # CID2 command is sent only if at least one entity for that pack
+            # consumes its data. When set, packs 1..N are polled with both
+            # commands regardless of platform entries.
+            cv.Optional(CONF_PACKS): cv.int_range(min=1, max=16),
         }
     )
     .extend(cv.polling_component_schema("5s"))
@@ -45,4 +52,5 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-    cg.add(var.set_pack_count(config[CONF_PACKS]))
+    if CONF_PACKS in config:
+        cg.add(var.set_pack_count(config[CONF_PACKS]))

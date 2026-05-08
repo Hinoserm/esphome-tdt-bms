@@ -1,0 +1,106 @@
+#include "tdt_bms_sensor.h"
+
+#include "esphome/core/log.h"
+
+#include <cmath>
+
+namespace esphome {
+namespace tdt_bms {
+
+static const char *const TAG = "tdt_bms.sensor";
+
+static inline void publish(sensor::Sensor *s, float v) {
+  if (s != nullptr) s->publish_state(v);
+}
+
+static inline void publish_nan(sensor::Sensor *s) {
+  if (s != nullptr) s->publish_state(NAN);
+}
+
+void TdtBmsPackSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
+  if (pack != this->pack_) return;
+
+  publish(this->pack_voltage_sensor_, data.pack_voltage_V);
+  publish(this->pack_current_sensor_, data.pack_current_A);
+  publish(this->pack_power_sensor_, data.pack_voltage_V * data.pack_current_A);
+  publish(this->cpu_voltage_sensor_, data.cpu_voltage_V);
+
+  publish(this->remaining_capacity_sensor_, data.remaining_capacity_Ah);
+  publish(this->full_capacity_sensor_, data.full_capacity_Ah);
+  publish(this->design_capacity_sensor_, data.design_capacity_Ah);
+
+  publish(this->cycle_count_sensor_, float(data.cycle_count));
+  publish(this->state_of_charge_sensor_, float(data.soc_pct));
+  publish(this->state_of_health_sensor_, float(data.soh_pct));
+
+  publish(this->insulation_resistance_sensor_, float(data.insulation_kohm));
+  publish(this->bms_self_consumption_sensor_, float(data.bms_self_consumption_mA));
+
+  publish(this->min_cell_voltage_sensor_, float(data.min_cell_mV) * 0.001f);
+  publish(this->max_cell_voltage_sensor_, float(data.max_cell_mV) * 0.001f);
+  publish(this->cell_voltage_delta_sensor_, float(data.delta_cell_mV) * 0.001f);
+  publish(this->avg_cell_voltage_sensor_, float(data.avg_cell_mV) * 0.001f);
+
+  for (uint8_t i = 0; i < data.bat_num && i < MAX_CELLS; i++) {
+    publish(this->cell_voltage_sensors_[i], float(data.cell_mV[i]) * 0.001f);
+  }
+  for (uint8_t i = 0; i < data.temp_num && i < MAX_TEMPS; i++) {
+    publish(this->temperature_sensors_[i], data.temp_C[i]);
+  }
+}
+
+void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
+  if (pack != this->pack_) return;
+
+  publish_nan(this->pack_voltage_sensor_);
+  publish_nan(this->pack_current_sensor_);
+  publish_nan(this->pack_power_sensor_);
+  publish_nan(this->cpu_voltage_sensor_);
+  publish_nan(this->remaining_capacity_sensor_);
+  publish_nan(this->full_capacity_sensor_);
+  publish_nan(this->design_capacity_sensor_);
+  publish_nan(this->cycle_count_sensor_);
+  publish_nan(this->state_of_charge_sensor_);
+  publish_nan(this->state_of_health_sensor_);
+  publish_nan(this->insulation_resistance_sensor_);
+  publish_nan(this->bms_self_consumption_sensor_);
+  publish_nan(this->min_cell_voltage_sensor_);
+  publish_nan(this->max_cell_voltage_sensor_);
+  publish_nan(this->cell_voltage_delta_sensor_);
+  publish_nan(this->avg_cell_voltage_sensor_);
+  for (auto *s : this->cell_voltage_sensors_) publish_nan(s);
+  for (auto *s : this->temperature_sensors_) publish_nan(s);
+}
+
+void TdtBmsPackSensor::dump_config() {
+  ESP_LOGCONFIG(TAG, "Pack %u sensors:", this->pack_);
+  LOG_SENSOR("  ", "Pack Voltage", this->pack_voltage_sensor_);
+  LOG_SENSOR("  ", "Pack Current", this->pack_current_sensor_);
+  LOG_SENSOR("  ", "Pack Power", this->pack_power_sensor_);
+  LOG_SENSOR("  ", "CPU Voltage", this->cpu_voltage_sensor_);
+  LOG_SENSOR("  ", "Remaining Capacity", this->remaining_capacity_sensor_);
+  LOG_SENSOR("  ", "Full Capacity", this->full_capacity_sensor_);
+  LOG_SENSOR("  ", "Design Capacity", this->design_capacity_sensor_);
+  LOG_SENSOR("  ", "Cycle Count", this->cycle_count_sensor_);
+  LOG_SENSOR("  ", "State of Charge", this->state_of_charge_sensor_);
+  LOG_SENSOR("  ", "State of Health", this->state_of_health_sensor_);
+  LOG_SENSOR("  ", "Insulation Resistance", this->insulation_resistance_sensor_);
+  LOG_SENSOR("  ", "BMS Self-Consumption", this->bms_self_consumption_sensor_);
+  LOG_SENSOR("  ", "Min Cell Voltage", this->min_cell_voltage_sensor_);
+  LOG_SENSOR("  ", "Max Cell Voltage", this->max_cell_voltage_sensor_);
+  LOG_SENSOR("  ", "Cell Voltage Delta", this->cell_voltage_delta_sensor_);
+  LOG_SENSOR("  ", "Average Cell Voltage", this->avg_cell_voltage_sensor_);
+  for (uint8_t i = 0; i < MAX_CELLS; i++) {
+    if (this->cell_voltage_sensors_[i] != nullptr) {
+      LOG_SENSOR("  ", "Cell Voltage", this->cell_voltage_sensors_[i]);
+    }
+  }
+  for (uint8_t i = 0; i < MAX_TEMPS; i++) {
+    if (this->temperature_sensors_[i] != nullptr) {
+      LOG_SENSOR("  ", "Temperature", this->temperature_sensors_[i]);
+    }
+  }
+}
+
+}  // namespace tdt_bms
+}  // namespace esphome

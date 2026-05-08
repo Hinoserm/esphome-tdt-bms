@@ -1,0 +1,188 @@
+# Reference ESPHome configuration for esphome-tdt-bms.
+#
+# Hardware: any ESP32 / ESP32-S3 with a hardware UART wired to the BMS console
+# port via an RS-232 level shifter and null-modem adapter. 9600 8N1.
+#
+# Provide your own secrets in a secrets.yaml alongside this file:
+#   wifi_ssid: "..."
+#   wifi_password: "..."
+#   api_encryption_key: "..."
+#   ota_password: "..."
+
+substitutions:
+  name: tdt-bms-monitor
+  friendly_name: TDT BMS Monitor
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+external_components:
+  - source: github://hinoserm/esphome-tdt-bms
+    components: [tdt_bms]
+
+uart:
+  id: bms_uart
+  tx_pin: GPIO16
+  rx_pin: GPIO17
+  baud_rate: 9600
+  rx_buffer_size: 384
+
+tdt_bms:
+  id: bms
+  uart_id: bms_uart
+  packs: 2
+  update_interval: 5s
+
+# ── Pack 1 ────────────────────────────────────────────────────────────────
+sensor:
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 1
+    pack_voltage: { name: "Pack 1 Voltage" }
+    pack_current: { name: "Pack 1 Current" }
+    pack_power: { name: "Pack 1 Power" }
+    cpu_voltage: { name: "Pack 1 CPU Voltage" }
+    state_of_charge: { name: "Pack 1 SOC" }
+    state_of_health: { name: "Pack 1 SOH" }
+    remaining_capacity: { name: "Pack 1 Remaining Capacity" }
+    full_capacity: { name: "Pack 1 Full Capacity" }
+    design_capacity: { name: "Pack 1 Design Capacity" }
+    cycle_count: { name: "Pack 1 Cycle Count" }
+    insulation_resistance: { name: "Pack 1 Insulation Resistance" }
+    bms_self_consumption: { name: "Pack 1 BMS Self-Consumption" }
+    min_cell_voltage: { name: "Pack 1 Min Cell Voltage" }
+    max_cell_voltage: { name: "Pack 1 Max Cell Voltage" }
+    cell_voltage_delta: { name: "Pack 1 Cell Voltage Delta" }
+    avg_cell_voltage: { name: "Pack 1 Avg Cell Voltage" }
+    cell_voltage_1:  { name: "Pack 1 Cell 1" }
+    cell_voltage_2:  { name: "Pack 1 Cell 2" }
+    cell_voltage_3:  { name: "Pack 1 Cell 3" }
+    cell_voltage_4:  { name: "Pack 1 Cell 4" }
+    cell_voltage_5:  { name: "Pack 1 Cell 5" }
+    cell_voltage_6:  { name: "Pack 1 Cell 6" }
+    cell_voltage_7:  { name: "Pack 1 Cell 7" }
+    cell_voltage_8:  { name: "Pack 1 Cell 8" }
+    cell_voltage_9:  { name: "Pack 1 Cell 9" }
+    cell_voltage_10: { name: "Pack 1 Cell 10" }
+    cell_voltage_11: { name: "Pack 1 Cell 11" }
+    cell_voltage_12: { name: "Pack 1 Cell 12" }
+    cell_voltage_13: { name: "Pack 1 Cell 13" }
+    cell_voltage_14: { name: "Pack 1 Cell 14" }
+    cell_voltage_15: { name: "Pack 1 Cell 15" }
+    cell_voltage_16: { name: "Pack 1 Cell 16" }
+    temperature_1: { name: "Pack 1 Temperature 1" }
+    temperature_2: { name: "Pack 1 Temperature 2" }
+    temperature_3: { name: "Pack 1 Temperature 3" }
+    temperature_4: { name: "Pack 1 Temperature 4" }
+    temperature_5: { name: "Pack 1 Temperature 5" }
+    temperature_6: { name: "Pack 1 Temperature 6" }
+
+  # ── Pack 2 ──────────────────────────────────────────────────────────────
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 2
+    pack_voltage: { name: "Pack 2 Voltage" }
+    pack_current: { name: "Pack 2 Current" }
+    pack_power: { name: "Pack 2 Power" }
+    cpu_voltage: { name: "Pack 2 CPU Voltage" }
+    state_of_charge: { name: "Pack 2 SOC" }
+    state_of_health: { name: "Pack 2 SOH" }
+    remaining_capacity: { name: "Pack 2 Remaining Capacity" }
+    full_capacity: { name: "Pack 2 Full Capacity" }
+    design_capacity: { name: "Pack 2 Design Capacity" }
+    cycle_count: { name: "Pack 2 Cycle Count" }
+    insulation_resistance: { name: "Pack 2 Insulation Resistance" }
+    bms_self_consumption: { name: "Pack 2 BMS Self-Consumption" }
+    min_cell_voltage: { name: "Pack 2 Min Cell Voltage" }
+    max_cell_voltage: { name: "Pack 2 Max Cell Voltage" }
+    cell_voltage_delta: { name: "Pack 2 Cell Voltage Delta" }
+    avg_cell_voltage: { name: "Pack 2 Avg Cell Voltage" }
+    cell_voltage_1:  { name: "Pack 2 Cell 1" }
+    cell_voltage_2:  { name: "Pack 2 Cell 2" }
+    cell_voltage_3:  { name: "Pack 2 Cell 3" }
+    cell_voltage_4:  { name: "Pack 2 Cell 4" }
+    cell_voltage_5:  { name: "Pack 2 Cell 5" }
+    cell_voltage_6:  { name: "Pack 2 Cell 6" }
+    cell_voltage_7:  { name: "Pack 2 Cell 7" }
+    cell_voltage_8:  { name: "Pack 2 Cell 8" }
+    cell_voltage_9:  { name: "Pack 2 Cell 9" }
+    cell_voltage_10: { name: "Pack 2 Cell 10" }
+    cell_voltage_11: { name: "Pack 2 Cell 11" }
+    cell_voltage_12: { name: "Pack 2 Cell 12" }
+    cell_voltage_13: { name: "Pack 2 Cell 13" }
+    cell_voltage_14: { name: "Pack 2 Cell 14" }
+    cell_voltage_15: { name: "Pack 2 Cell 15" }
+    cell_voltage_16: { name: "Pack 2 Cell 16" }
+    temperature_1: { name: "Pack 2 Temperature 1" }
+    temperature_2: { name: "Pack 2 Temperature 2" }
+    temperature_3: { name: "Pack 2 Temperature 3" }
+    temperature_4: { name: "Pack 2 Temperature 4" }
+    temperature_5: { name: "Pack 2 Temperature 5" }
+    temperature_6: { name: "Pack 2 Temperature 6" }
+
+binary_sensor:
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 1
+    online: { name: "Pack 1 Online" }
+    charging_mosfet: { name: "Pack 1 Charging MOSFET" }
+    discharging_mosfet: { name: "Pack 1 Discharging MOSFET" }
+    heater: { name: "Pack 1 Heater" }
+    bms_sleeping: { name: "Pack 1 BMS Sleeping" }
+    protection_active: { name: "Pack 1 Protection Active" }
+    warning_active: { name: "Pack 1 Warning Active" }
+    fault_active: { name: "Pack 1 Fault Active" }
+    low_soc_warning: { name: "Pack 1 Low SOC Warning" }
+    balancing_active: { name: "Pack 1 Balancing Active" }
+
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 2
+    online: { name: "Pack 2 Online" }
+    charging_mosfet: { name: "Pack 2 Charging MOSFET" }
+    discharging_mosfet: { name: "Pack 2 Discharging MOSFET" }
+    heater: { name: "Pack 2 Heater" }
+    bms_sleeping: { name: "Pack 2 BMS Sleeping" }
+    protection_active: { name: "Pack 2 Protection Active" }
+    warning_active: { name: "Pack 2 Warning Active" }
+    fault_active: { name: "Pack 2 Fault Active" }
+    low_soc_warning: { name: "Pack 2 Low SOC Warning" }
+    balancing_active: { name: "Pack 2 Balancing Active" }
+
+text_sensor:
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 1
+    battery_mode: { name: "Pack 1 Battery Mode" }
+    chemistry: { name: "Pack 1 Chemistry" }
+    active_protections: { name: "Pack 1 Active Protections" }
+    active_warnings: { name: "Pack 1 Active Warnings" }
+    active_faults: { name: "Pack 1 Active Faults" }
+
+  - platform: tdt_bms
+    tdt_bms_id: bms
+    pack: 2
+    battery_mode: { name: "Pack 2 Battery Mode" }
+    chemistry: { name: "Pack 2 Chemistry" }
+    active_protections: { name: "Pack 2 Active Protections" }
+    active_warnings: { name: "Pack 2 Active Warnings" }
+    active_faults: { name: "Pack 2 Active Faults" }

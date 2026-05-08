@@ -26,6 +26,7 @@ class TdtBmsListener {
 
   virtual void on_analog_data(uint8_t pack, const AnalogFrame &data) {}
   virtual void on_status_data(uint8_t pack, const StatusFrame &data) {}
+  virtual void on_info_data(uint8_t pack, const InfoFrame &data) {}
   virtual void on_pack_online(uint8_t pack) {}
   virtual void on_pack_offline(uint8_t pack) {}
   virtual void dump_config() {}
@@ -79,7 +80,12 @@ class TdtBms : public PollingComponent, public uart::UARTDevice {
   // of pack numbers registered by listeners. When non-zero, packs 1..pack_count_
   // are polled with both analog and status commands regardless of listeners.
   uint8_t pack_count_{0};
-  uint16_t bms_mode_f_{0};   // Read from CID2=0xC1 once at boot; gates current scale.
+
+  // Per-pack feature flag word fetched once at boot via CID2=0xC1. Gates the
+  // pack-current scale during analog parsing (bit 0 = ×0.1 vs default ×0.01).
+  // Indexed pack-1 (zero-based).
+  uint16_t bms_mode_f_[MAX_PACKS] = {};
+  bool info_received_[MAX_PACKS] = {};
 
   std::vector<TdtBmsListener *> listeners_;
 

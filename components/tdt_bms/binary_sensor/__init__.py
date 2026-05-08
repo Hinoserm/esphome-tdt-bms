@@ -44,10 +44,19 @@ BINARY_SENSORS = {
     ),
 }
 
-CONFIG_SCHEMA = TDT_BMS_PLATFORM_SCHEMA.extend(
-    {cv.GenerateID(): cv.declare_id(TdtBmsPackBinarySensor)}
-).extend(
-    {cv.Optional(k): binary_sensor.binary_sensor_schema(**v) for k, v in BINARY_SENSORS.items()}
+# Per-cell balancing flags. `cell_balancing_N` is true while the BMS is
+# actively balancing cell N (1-based index).
+CELL_BALANCING = [f"cell_balancing_{i}" for i in range(1, 17)]
+_CELL_BALANCING_SCHEMA = binary_sensor.binary_sensor_schema()
+
+CONFIG_SCHEMA = (
+    TDT_BMS_PLATFORM_SCHEMA.extend(
+        {cv.GenerateID(): cv.declare_id(TdtBmsPackBinarySensor)}
+    )
+    .extend(
+        {cv.Optional(k): binary_sensor.binary_sensor_schema(**v) for k, v in BINARY_SENSORS.items()}
+    )
+    .extend({cv.Optional(k): _CELL_BALANCING_SCHEMA for k in CELL_BALANCING})
 )
 
 
@@ -60,3 +69,8 @@ async def to_code(config):
         if key in config:
             sens = await binary_sensor.new_binary_sensor(config[key])
             cg.add(getattr(var, f"set_{key}_binary_sensor")(sens))
+
+    for i, key in enumerate(CELL_BALANCING):
+        if key in config:
+            sens = await binary_sensor.new_binary_sensor(config[key])
+            cg.add(var.set_cell_balancing_binary_sensor(i, sens))

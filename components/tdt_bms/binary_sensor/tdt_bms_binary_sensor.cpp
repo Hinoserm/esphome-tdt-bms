@@ -18,9 +18,15 @@ bool TdtBmsPackBinarySensor::any_status_sensor_set_() const {
          this->fault_active_ || this->low_soc_warning_;
 }
 
+bool TdtBmsPackBinarySensor::any_cell_balancing_set_() const {
+  for (auto *s : this->cell_balancing_sensors_) if (s) return true;
+  return false;
+}
+
 bool TdtBmsPackBinarySensor::wants_analog() const {
-  // balancing_active is derived from analog data.
+  // balancing_active and the per-cell balancing flags are derived from analog data.
   if (this->balancing_active_ != nullptr) return true;
+  if (this->any_cell_balancing_set_()) return true;
   // Online tracking needs at least one polled command for the pack. If the
   // user only wired `online:` on this listener and nothing status-fed, fall
   // back to wanting analog so the pack still gets polled.
@@ -31,6 +37,11 @@ bool TdtBmsPackBinarySensor::wants_analog() const {
 void TdtBmsPackBinarySensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
   if (pack != this->pack_) return;
   publish(this->balancing_active_, data.balance_bitmap != 0);
+  for (uint8_t i = 0; i < MAX_CELLS; i++) {
+    if (this->cell_balancing_sensors_[i] == nullptr) continue;
+    const bool on = (data.balance_bitmap & (uint32_t(1) << i)) != 0;
+    this->cell_balancing_sensors_[i]->publish_state(on);
+  }
 }
 
 void TdtBmsPackBinarySensor::on_status_data(uint8_t pack, const StatusFrame &data) {
@@ -68,6 +79,7 @@ void TdtBmsPackBinarySensor::on_pack_offline(uint8_t pack) {
   publish(this->fault_active_, false);
   publish(this->low_soc_warning_, false);
   publish(this->balancing_active_, false);
+  for (auto *s : this->cell_balancing_sensors_) publish(s, false);
 }
 
 void TdtBmsPackBinarySensor::dump_config() {
@@ -82,6 +94,11 @@ void TdtBmsPackBinarySensor::dump_config() {
   LOG_BINARY_SENSOR("  ", "Low SOC Warning", this->low_soc_warning_);
   LOG_BINARY_SENSOR("  ", "Balancing Active", this->balancing_active_);
   LOG_BINARY_SENSOR("  ", "Online", this->online_);
+  for (uint8_t i = 0; i < MAX_CELLS; i++) {
+    if (this->cell_balancing_sensors_[i] != nullptr) {
+      LOG_BINARY_SENSOR("  ", "Cell Balancing", this->cell_balancing_sensors_[i]);
+    }
+  }
 }
 
 }  // namespace tdt_bms

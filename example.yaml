@@ -168,6 +168,22 @@ binary_sensor:
     fault_active: { name: "Pack 1 Fault Active" }
     low_soc_warning: { name: "Pack 1 Low SOC Warning" }
     balancing_active: { name: "Pack 1 Balancing Active" }
+    cell_balancing_1:  { name: "Pack 1 Cell 1 Balancing" }
+    cell_balancing_2:  { name: "Pack 1 Cell 2 Balancing" }
+    cell_balancing_3:  { name: "Pack 1 Cell 3 Balancing" }
+    cell_balancing_4:  { name: "Pack 1 Cell 4 Balancing" }
+    cell_balancing_5:  { name: "Pack 1 Cell 5 Balancing" }
+    cell_balancing_6:  { name: "Pack 1 Cell 6 Balancing" }
+    cell_balancing_7:  { name: "Pack 1 Cell 7 Balancing" }
+    cell_balancing_8:  { name: "Pack 1 Cell 8 Balancing" }
+    cell_balancing_9:  { name: "Pack 1 Cell 9 Balancing" }
+    cell_balancing_10: { name: "Pack 1 Cell 10 Balancing" }
+    cell_balancing_11: { name: "Pack 1 Cell 11 Balancing" }
+    cell_balancing_12: { name: "Pack 1 Cell 12 Balancing" }
+    cell_balancing_13: { name: "Pack 1 Cell 13 Balancing" }
+    cell_balancing_14: { name: "Pack 1 Cell 14 Balancing" }
+    cell_balancing_15: { name: "Pack 1 Cell 15 Balancing" }
+    cell_balancing_16: { name: "Pack 1 Cell 16 Balancing" }
 
   - platform: tdt_bms
     tdt_bms_id: bms
@@ -182,6 +198,22 @@ binary_sensor:
     fault_active: { name: "Pack 2 Fault Active" }
     low_soc_warning: { name: "Pack 2 Low SOC Warning" }
     balancing_active: { name: "Pack 2 Balancing Active" }
+    cell_balancing_1:  { name: "Pack 2 Cell 1 Balancing" }
+    cell_balancing_2:  { name: "Pack 2 Cell 2 Balancing" }
+    cell_balancing_3:  { name: "Pack 2 Cell 3 Balancing" }
+    cell_balancing_4:  { name: "Pack 2 Cell 4 Balancing" }
+    cell_balancing_5:  { name: "Pack 2 Cell 5 Balancing" }
+    cell_balancing_6:  { name: "Pack 2 Cell 6 Balancing" }
+    cell_balancing_7:  { name: "Pack 2 Cell 7 Balancing" }
+    cell_balancing_8:  { name: "Pack 2 Cell 8 Balancing" }
+    cell_balancing_9:  { name: "Pack 2 Cell 9 Balancing" }
+    cell_balancing_10: { name: "Pack 2 Cell 10 Balancing" }
+    cell_balancing_11: { name: "Pack 2 Cell 11 Balancing" }
+    cell_balancing_12: { name: "Pack 2 Cell 12 Balancing" }
+    cell_balancing_13: { name: "Pack 2 Cell 13 Balancing" }
+    cell_balancing_14: { name: "Pack 2 Cell 14 Balancing" }
+    cell_balancing_15: { name: "Pack 2 Cell 15 Balancing" }
+    cell_balancing_16: { name: "Pack 2 Cell 16 Balancing" }
 
 text_sensor:
   - platform: tdt_bms
@@ -192,6 +224,8 @@ text_sensor:
     active_protections: { name: "Pack 1 Active Protections" }
     active_warnings: { name: "Pack 1 Active Warnings" }
     active_faults: { name: "Pack 1 Active Faults" }
+    firmware_version: { name: "Pack 1 Firmware Version" }
+    balancing_cells: { name: "Pack 1 Balancing Cells" }
 
   - platform: tdt_bms
     tdt_bms_id: bms
@@ -201,3 +235,5 @@ text_sensor:
     active_protections: { name: "Pack 2 Active Protections" }
     active_warnings: { name: "Pack 2 Active Warnings" }
     active_faults: { name: "Pack 2 Active Faults" }
+    firmware_version: { name: "Pack 2 Firmware Version" }
+    balancing_cells: { name: "Pack 2 Balancing Cells" }

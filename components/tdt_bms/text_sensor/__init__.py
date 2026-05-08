@@ -32,6 +32,8 @@ TEXT_SENSORS = {
     "active_protections": dict(entity_category=ENTITY_CATEGORY_DIAGNOSTIC),
     "active_warnings": dict(entity_category=ENTITY_CATEGORY_DIAGNOSTIC),
     "active_faults": dict(entity_category=ENTITY_CATEGORY_DIAGNOSTIC),
+    "firmware_version": dict(entity_category=ENTITY_CATEGORY_DIAGNOSTIC),
+    "balancing_cells": dict(),
 }
 
 CONFIG_SCHEMA = TDT_BMS_PLATFORM_SCHEMA.extend(

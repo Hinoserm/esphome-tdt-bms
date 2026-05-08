@@ -85,6 +85,22 @@ static const char *chemistry_text(uint8_t v) {
   }
 }
 
+void TdtBmsPackTextSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
+  if (pack != this->pack_) return;
+  if (this->balancing_cells_ == nullptr) return;
+
+  // Build a comma-separated 1-based list of cells whose balance bit is set.
+  // Empty string when no cells are balancing.
+  std::string out;
+  for (uint8_t i = 0; i < data.bat_num && i < MAX_CELLS; i++) {
+    if (data.balance_bitmap & (1u << i)) {
+      if (!out.empty()) out += ",";
+      out += std::to_string(int(i + 1));
+    }
+  }
+  publish(this->balancing_cells_, out);
+}
+
 void TdtBmsPackTextSensor::on_status_data(uint8_t pack, const StatusFrame &data) {
   if (pack != this->pack_) return;
 
@@ -95,6 +111,11 @@ void TdtBmsPackTextSensor::on_status_data(uint8_t pack, const StatusFrame &data)
   publish(this->active_faults_, join_flags(FAULT_BITS, data.status5, 0));
 }
 
+void TdtBmsPackTextSensor::on_info_data(uint8_t pack, const InfoFrame &data) {
+  if (pack != this->pack_) return;
+  publish(this->firmware_version_, std::string(data.firmware_version));
+}
+
 void TdtBmsPackTextSensor::on_pack_offline(uint8_t pack) {
   if (pack != this->pack_) return;
   publish(this->battery_mode_, "Offline");
@@ -102,6 +123,10 @@ void TdtBmsPackTextSensor::on_pack_offline(uint8_t pack) {
   publish(this->active_protections_, "");
   publish(this->active_warnings_, "");
   publish(this->active_faults_, "");
+  publish(this->balancing_cells_, "");
+  // firmware_version_ is intentionally not cleared on offline — the firmware
+  // string doesn't change and surviving the disconnect window is more useful
+  // than blanking it.
 }
 
 void TdtBmsPackTextSensor::dump_config() {
@@ -111,6 +136,8 @@ void TdtBmsPackTextSensor::dump_config() {
   LOG_TEXT_SENSOR("  ", "Active Protections", this->active_protections_);
   LOG_TEXT_SENSOR("  ", "Active Warnings", this->active_warnings_);
   LOG_TEXT_SENSOR("  ", "Active Faults", this->active_faults_);
+  LOG_TEXT_SENSOR("  ", "Firmware Version", this->firmware_version_);
+  LOG_TEXT_SENSOR("  ", "Balancing Cells", this->balancing_cells_);
 }
 
 }  // namespace tdt_bms

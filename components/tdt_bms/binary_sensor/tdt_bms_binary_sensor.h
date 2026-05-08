@@ -33,8 +33,15 @@ class TdtBmsPackBinarySensor : public TdtBmsListener {
   void set_balancing_active_binary_sensor(binary_sensor::BinarySensor *s) { balancing_active_ = s; }
   void set_online_binary_sensor(binary_sensor::BinarySensor *s) { online_ = s; }
 
+  // Per-cell balancing state: true when the corresponding bit is set in the
+  // BMS's balance_bitmap (cell index is 0-based here, 1-based in YAML keys).
+  void set_cell_balancing_binary_sensor(uint8_t i, binary_sensor::BinarySensor *s) {
+    if (i < MAX_CELLS) cell_balancing_sensors_[i] = s;
+  }
+
  protected:
   bool any_status_sensor_set_() const;
+  bool any_cell_balancing_set_() const;
 
   uint8_t pack_;
   binary_sensor::BinarySensor *charging_mosfet_{nullptr};
@@ -47,6 +54,7 @@ class TdtBmsPackBinarySensor : public TdtBmsListener {
   binary_sensor::BinarySensor *low_soc_warning_{nullptr};
   binary_sensor::BinarySensor *balancing_active_{nullptr};
   binary_sensor::BinarySensor *online_{nullptr};
+  binary_sensor::BinarySensor *cell_balancing_sensors_[MAX_CELLS]{nullptr};
 };
 
 }  // namespace tdt_bms

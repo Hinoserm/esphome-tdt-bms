@@ -103,19 +103,25 @@ See [`example.yaml`](example.yaml) for a full reference covering both packs and 
 
 **Pack-level**: `pack_voltage`, `pack_current`, `pack_power`, `cpu_voltage`, `remaining_capacity`, `full_capacity`, `design_capacity`, `cycle_count`, `state_of_charge`, `state_of_health`, `insulation_resistance`, `bms_self_consumption`, `min_cell_voltage`, `max_cell_voltage`, `cell_voltage_delta`, `avg_cell_voltage`, `temperature_high`, `temperature_low`
 
+The per-pack current scale is auto-detected at boot from the BMS firmware-info word (CID2=0xC1). On firmware variants with the high-current scale flag set, readings are correctly interpreted as 0.1 A per LSB; on default firmware they are interpreted as 0.01 A per LSB.
+
 **Per-cell**: `cell_voltage_1` … `cell_voltage_16`
 
 **Per-temperature-sensor**: `temperature_1` … `temperature_6`
 
 ### `binary_sensor:`
 
-`online`, `charging_mosfet`, `discharging_mosfet`, `heater`, `bms_sleeping`, `protection_active`, `warning_active`, `fault_active`, `low_soc_warning`, `balancing_active`
+**Pack-level**: `online`, `charging_mosfet`, `discharging_mosfet`, `heater`, `bms_sleeping`, `protection_active`, `warning_active`, `fault_active`, `low_soc_warning`, `balancing_active`
+
+**Per-cell**: `cell_balancing_1` … `cell_balancing_16` (true while the BMS is actively balancing that cell)
 
 ### `text_sensor:`
 
 - `battery_mode` — `Charging` / `Discharging` / `Idle`
 - `chemistry` — `LiFePO4` / `Li-ion NMC` / `LTO` / etc.
 - `active_protections`, `active_warnings`, `active_faults` — comma-separated lists of currently-tripped flag names
+- `balancing_cells` — comma-separated 1-based list of cells currently balancing (empty when none)
+- `firmware_version` — pack firmware/board version string (read once at boot)
 
 ## Notes
 

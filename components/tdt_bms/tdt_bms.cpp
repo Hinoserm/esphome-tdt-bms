@@ -109,8 +109,27 @@ void TdtBms::update() {
 }
 
 void TdtBms::enqueue_round_() {
-  this->tx_queue_ = this->active_polls_;
+  this->tx_queue_.clear();
   this->tx_queue_head_ = 0;
+
+  // Prepend a CID2=0xC1 (firmware info) query for any active pack we haven't
+  // successfully fetched info for yet. This populates per-pack BMS_MODE_F so
+  // analog parsing uses the correct current scale, and surfaces the firmware
+  // version string. After a successful response, info_received_[pack] flips
+  // true and the info query is dropped from subsequent rounds.
+  for (const auto &p : this->active_polls_) {
+    if (p.pack == 0 || p.pack > MAX_PACKS) continue;
+    if (this->info_received_[p.pack - 1]) continue;
+    // Avoid duplicates if the pack appears in multiple polls.
+    bool already = false;
+    for (const auto &q : this->tx_queue_) {
+      if (q.pack == p.pack && q.cid2 == CID2_INFO) { already = true; break; }
+    }
+    if (!already) this->tx_queue_.push_back({p.pack, CID2_INFO});
+  }
+
+  // Then the regular per-round (analog, status) requests.
+  for (const auto &p : this->active_polls_) this->tx_queue_.push_back(p);
 }
 
 void TdtBms::try_send_next_() {
@@ -210,14 +229,34 @@ void TdtBms::handle_complete_frame_() {
   }
 
   bool parsed = false;
+  uint16_t pack_mode_f = 0;
+  if (hdr.target_addr >= 1 && hdr.target_addr <= MAX_PACKS) {
+    pack_mode_f = this->bms_mode_f_[hdr.target_addr - 1];
+  }
   if (hdr.cid2 == CID2_ANALOG) {
     AnalogFrame data{};
-    if (parse_analog(hdr.info, hdr.info_chars, this->bms_mode_f_, data)) {
+    if (parse_analog(hdr.info, hdr.info_chars, pack_mode_f, data)) {
       this->mark_response_received_(hdr.target_addr);
       for (auto *l : this->analog_listeners_) l->on_analog_data(hdr.target_addr, data);
       parsed = true;
     } else {
       ESP_LOGW(TAG, "Pack %u: analog parse failed", hdr.target_addr);
+    }
+  } else if (hdr.cid2 == CID2_INFO) {
+    InfoFrame data{};
+    if (parse_info(hdr.info, hdr.info_chars, data)) {
+      this->mark_response_received_(hdr.target_addr);
+      if (hdr.target_addr >= 1 && hdr.target_addr <= MAX_PACKS) {
+        const uint8_t i = hdr.target_addr - 1;
+        this->bms_mode_f_[i] = data.bms_mode_f;
+        this->info_received_[i] = true;
+      }
+      ESP_LOGI(TAG, "Pack %u firmware: %s, BMS_MODE_F=0x%04X, BMS_MODE_F1=0x%04X",
+               hdr.target_addr, data.firmware_version, data.bms_mode_f, data.bms_mode_f1);
+      for (auto *l : this->listeners_) l->on_info_data(hdr.target_addr, data);
+      parsed = true;
+    } else {
+      ESP_LOGW(TAG, "Pack %u: info parse failed", hdr.target_addr);
     }
   } else if (hdr.cid2 == CID2_STATUS) {
     StatusFrame data{};

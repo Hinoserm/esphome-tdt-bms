@@ -271,5 +271,22 @@ bool parse_status(const uint8_t *info, size_t info_chars, StatusFrame &out) {
   return true;
 }
 
+bool parse_info(const uint8_t *info, size_t info_chars, InfoFrame &out) {
+  // Firmware version: 20 bytes encoded as 40 ASCII hex chars at info offset 0.
+  // Each pair of hex chars decodes to one ASCII character of the version string.
+  if (info_chars < 40) return false;
+  for (uint8_t i = 0; i < 20; i++) {
+    out.firmware_version[i] = char(read_byte(info, size_t(i) * 2));
+  }
+  out.firmware_version[20] = '\0';
+
+  // BMS_MODE_F is 4 ASCII hex chars (uint16) at info offset 40 — when present.
+  // Older firmware truncates the frame here; both flag words remain 0.
+  out.bms_mode_f = (info_chars >= 44) ? read_word(info, 40) : uint16_t(0);
+  out.bms_mode_f1 = (info_chars >= 48) ? read_word(info, 44) : uint16_t(0);
+
+  return true;
+}
+
 }  // namespace tdt_bms
 }  // namespace esphome

@@ -121,5 +121,22 @@ bool parse_analog(const uint8_t *info, size_t info_chars, uint16_t bms_mode_f, A
 // Parse the alarm/status info field.
 bool parse_status(const uint8_t *info, size_t info_chars, StatusFrame &out);
 
+// Decoded firmware-info (CID2=0xC1) data for one pack.
+struct InfoFrame {
+  // Firmware/board version string. 20 characters max plus terminator.
+  char firmware_version[21];
+
+  // Feature flag word. bit 0 = current-scale ×0.1 (vs default ×0.01),
+  // bit 1 = active-balance fields populated, bit 5 = MCU current-sensor MOSFET valid,
+  // higher bits gate UI features in the vendor's host tool.
+  uint16_t bms_mode_f;
+
+  // Secondary feature flag word. Reserved for future use.
+  uint16_t bms_mode_f1;
+};
+
+// Parse the firmware-info (CID2=0xC1) response info field.
+bool parse_info(const uint8_t *info, size_t info_chars, InfoFrame &out);
+
 }  // namespace tdt_bms
 }  // namespace esphome

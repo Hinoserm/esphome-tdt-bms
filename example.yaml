@@ -90,6 +90,8 @@ sensor:
     active_balance_target_voltage: { name: "Pack 1 Active Balance Target Voltage" }
     emergency_mode_timer: { name: "Pack 1 Emergency Mode Timer" }
     equipment_voltage: { name: "Pack 1 Equipment Voltage" }
+    time_to_empty: { name: "Pack 1 Time to Empty" }
+    time_to_full: { name: "Pack 1 Time to Full" }
     cell_voltage_1:  { name: "Pack 1 Cell 1" }
     cell_voltage_2:  { name: "Pack 1 Cell 2" }
     cell_voltage_3:  { name: "Pack 1 Cell 3" }
@@ -139,6 +141,8 @@ sensor:
     active_balance_target_voltage: { name: "Pack 2 Active Balance Target Voltage" }
     emergency_mode_timer: { name: "Pack 2 Emergency Mode Timer" }
     equipment_voltage: { name: "Pack 2 Equipment Voltage" }
+    time_to_empty: { name: "Pack 2 Time to Empty" }
+    time_to_full: { name: "Pack 2 Time to Full" }
     cell_voltage_1:  { name: "Pack 2 Cell 1" }
     cell_voltage_2:  { name: "Pack 2 Cell 2" }
     cell_voltage_3:  { name: "Pack 2 Cell 3" }

@@ -28,7 +28,8 @@ bool TdtBmsPackSensor::any_sensor_set_() const {
       this->cell_voltage_delta_sensor_ || this->avg_cell_voltage_sensor_ ||
       this->temperature_high_sensor_ || this->temperature_low_sensor_ ||
       this->active_balance_current_sensor_ || this->active_balance_target_voltage_sensor_ ||
-      this->emergency_mode_timer_sensor_ || this->equipment_voltage_sensor_) {
+      this->emergency_mode_timer_sensor_ || this->equipment_voltage_sensor_ ||
+      this->time_to_empty_sensor_ || this->time_to_full_sensor_) {
     return true;
   }
   for (auto *s : this->cell_voltage_sensors_) if (s) return true;
@@ -85,6 +86,28 @@ void TdtBmsPackSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
     publish_nan(this->emergency_mode_timer_sensor_);
     publish_nan(this->equipment_voltage_sensor_);
   }
+
+  // Time-to-empty / time-to-full, derived from pack current + capacity.
+  // Sign convention: positive current = charging, negative = discharging.
+  // Below the noise threshold both are NaN (HA shows "unavailable") since the
+  // result would be unreliable and a divide-by-zero is right around the corner.
+  static constexpr float CURRENT_NOISE_A = 0.05f;
+  if (data.pack_current_A > CURRENT_NOISE_A) {
+    // Charging: time_to_full = headroom / charge current.
+    float headroom = data.full_capacity_Ah - data.remaining_capacity_Ah;
+    if (headroom < 0.0f) headroom = 0.0f;
+    publish(this->time_to_full_sensor_, headroom / data.pack_current_A);
+    publish_nan(this->time_to_empty_sensor_);
+  } else if (data.pack_current_A < -CURRENT_NOISE_A) {
+    // Discharging: time_to_empty = remaining / |discharge current|.
+    float remaining = data.remaining_capacity_Ah;
+    if (remaining < 0.0f) remaining = 0.0f;
+    publish(this->time_to_empty_sensor_, remaining / -data.pack_current_A);
+    publish_nan(this->time_to_full_sensor_);
+  } else {
+    publish_nan(this->time_to_empty_sensor_);
+    publish_nan(this->time_to_full_sensor_);
+  }
 }
 
 void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
@@ -112,6 +135,8 @@ void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
   publish_nan(this->active_balance_target_voltage_sensor_);
   publish_nan(this->emergency_mode_timer_sensor_);
   publish_nan(this->equipment_voltage_sensor_);
+  publish_nan(this->time_to_empty_sensor_);
+  publish_nan(this->time_to_full_sensor_);
   for (auto *s : this->cell_voltage_sensors_) publish_nan(s);
   for (auto *s : this->temperature_sensors_) publish_nan(s);
 }
@@ -140,6 +165,8 @@ void TdtBmsPackSensor::dump_config() {
   LOG_SENSOR("  ", "Active Balance Target Voltage", this->active_balance_target_voltage_sensor_);
   LOG_SENSOR("  ", "Emergency Mode Timer", this->emergency_mode_timer_sensor_);
   LOG_SENSOR("  ", "Equipment Voltage", this->equipment_voltage_sensor_);
+  LOG_SENSOR("  ", "Time to Empty", this->time_to_empty_sensor_);
+  LOG_SENSOR("  ", "Time to Full", this->time_to_full_sensor_);
   for (uint8_t i = 0; i < MAX_CELLS; i++) {
     if (this->cell_voltage_sensors_[i] != nullptr) {
       LOG_SENSOR("  ", "Cell Voltage", this->cell_voltage_sensors_[i]);

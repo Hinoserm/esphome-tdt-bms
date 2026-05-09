@@ -187,6 +187,21 @@ SENSORS = {
         state_class=STATE_CLASS_MEASUREMENT,
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
     ),
+    # Derived runtime estimates from current + capacity. The sensor for the
+    # direction the pack isn't moving in stays unavailable, as does both when
+    # the current is below the noise threshold.
+    "time_to_empty": dict(
+        unit_of_measurement="h",
+        accuracy_decimals=1,
+        device_class="duration",
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    "time_to_full": dict(
+        unit_of_measurement="h",
+        accuracy_decimals=1,
+        device_class="duration",
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
 }
 
 CELLS = [f"cell_voltage_{i}" for i in range(1, 17)]

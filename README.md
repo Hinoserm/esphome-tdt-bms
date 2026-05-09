@@ -125,6 +125,8 @@ See [`example.yaml`](example.yaml) for a full reference covering both packs and 
 
 **Active-balance** (only populated when `BMS_MODE_F` bit 1 is set; otherwise the sensors stay unavailable): `active_balance_current`, `active_balance_target_voltage`, `emergency_mode_timer`, `equipment_voltage`
 
+**Runtime estimates** (derived from pack current + capacity): `time_to_empty`, `time_to_full`. Each sensor is only published in the relevant direction — `time_to_empty` is unavailable while charging, `time_to_full` while discharging. Both are unavailable when the pack current is below ~50 mA (idle / noise floor).
+
 The per-pack current scale is auto-detected at boot from the BMS firmware-info word (CID2=0xC1). On firmware variants with the high-current scale flag set, readings are correctly interpreted as 0.1 A per LSB; on default firmware they are interpreted as 0.01 A per LSB.
 
 **Per-cell**: `cell_voltage_1` … `cell_voltage_16`

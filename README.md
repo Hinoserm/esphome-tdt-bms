@@ -7,10 +7,12 @@ Multi-pack chains are supported: when several packs are linked through their int
 ## Tested with
 
 - 2× Humsienk 16S 100 Ah LiFePO4 rack-mount packs (master/slave chain)
-- ESP32-S3 with W5500 ethernet, ESP-IDF framework
-- ESPHome 2026.4.5
+- ESP32-S3-DevKitC-1 with W5500 ethernet, ESP-IDF framework
+- ESPHome 2026.4.4 / 2026.4.5
 
-The component is structurally complete and validated against live hardware. Optional firmware features gated on the `BMS_MODE_F` flag word (active-balance current/target, MCU current sensor) are not yet exercised; defaults match the most common firmware behavior.
+Validated end-to-end on live hardware: cell voltages, pack voltage / current / power, capacity (remaining / full / design), cycle count, SOC / SOH, insulation resistance, BMS self-consumption, all six temperature channels plus per-pack hot-spot / cold-spot, MOSFET states, all rolled-up protection / warning / fault flags, battery mode, chemistry, balancer activity (rolled-up + per-cell + comma-separated cell list), and per-pack firmware version.
+
+Active-balance current / target / equipment-voltage fields (gated on `BMS_MODE_F & 0x02`) are deferred — they aren't surfaced as sensors yet because the validated firmware doesn't emit them. If your firmware sets that flag and you'd like those exposed, open an issue.
 
 ## Hardware requirements
 
@@ -46,6 +48,26 @@ Add the component to your ESPHome configuration:
 ```yaml
 external_components:
   - source: github://hinoserm/esphome-tdt-bms
+    components: [tdt_bms]
+```
+
+ESPHome caches GitHub-fetched components for 24 hours by default. To always pull the latest commit on every build (useful while tracking changes), set `refresh: 0s`:
+
+```yaml
+external_components:
+  - source: github://hinoserm/esphome-tdt-bms
+    components: [tdt_bms]
+    refresh: 0s
+```
+
+To pin to a specific commit or tag for reproducibility, use the explicit git source form with `ref:`:
+
+```yaml
+external_components:
+  - source:
+      type: git
+      url: https://github.com/hinoserm/esphome-tdt-bms
+      ref: main          # or a commit SHA / tag
     components: [tdt_bms]
 ```
 
@@ -127,9 +149,17 @@ The per-pack current scale is auto-detected at boot from the BMS firmware-info w
 
 - **Auto-detect packs**: if `packs:` isn't set on the hub, the active pack list is derived from the `pack:` numbers used in your `sensor:` / `binary_sensor:` / `text_sensor:` entries. Only those packs are polled, and only commands with a consumer are sent — e.g. if no `binary_sensor` or `text_sensor` is configured for a pack, the alarm/status query for that pack is skipped entirely.
 - **Polling cadence**: each `update_interval` tick enqueues the analog query (for sensor consumers) and the status query (for binary_sensor / text_sensor consumers) for every active pack. With 2 packs at the default 5 s interval, each pack refreshes roughly every 5 s. For larger chains, raise the interval so the bus has time to drain between rounds.
+- **Firmware info**: `CID2=0xC1` is sent once per pack at boot to read the firmware version string and the `BMS_MODE_F` feature flag word. The flag word is used to auto-select the pack-current scale. The `firmware_version` text sensor is published once after the first successful info response and not re-queried until the device reboots.
 - **Temperature offset**: the BMS firmware reports temperatures as `(K × 10 − 2730)`. Readings sit ~0.5 °C below a calibrated reference; subtract 0.5 in your dashboard if precision matters.
 - **Online status**: a pack that fails to respond for 3 consecutive update cycles is marked offline; its sensors publish `NaN` (numeric) or `false` (binary) until it returns.
 - **Insulation resistance**: open-circuit reads sit near 655 MΩ. Values below ~100 kΩ indicate a developing insulation fault and are worth alerting on.
+- **Entity volume**: a fully-wired 2-pack configuration with every available entity exposes ~125 entities to Home Assistant (≈48 numeric sensors + 26 binary sensors + 12 text sensors per pack, × 2). Comment out anything you don't need from the platform blocks; per-cell entries in particular are noisy.
+
+## Troubleshooting
+
+- **BMS doesn't respond at all**: confirm the chain is in default protocol mode (BMS Tools or front-panel menu — non-default protocols disable console-port relay), the master pack actually has the RS-232 cable, and your level shifter is powered. The bus is half-duplex on TDT firmware; if you have a host program running concurrently it will collide. On ESP32-S3 with ESP-IDF, also confirm the `CONFIG_ESP_CONSOLE_NONE` / `CONFIG_ESP_CONSOLE_SECONDARY_NONE` flags are set (see above).
+- **Some packs respond, others don't**: chain-link cabling between packs. The slave packs reach the host only via the master's relay. Misaligned chain ports (using the console port instead of the dedicated chain port between packs) will produce silent slaves while the master still works.
+- **Current reading is 10× off**: the `BMS_MODE_F` auto-detect at boot didn't run successfully. Check that `tdt_bms` logs `Pack N firmware: …, BMS_MODE_F=…` at boot. If the info query fails, the component falls back to the default 0.01 A/LSB scale. Open an issue with your firmware version string.
 
 ## License
 

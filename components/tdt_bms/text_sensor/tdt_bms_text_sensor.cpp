@@ -114,6 +114,11 @@ void TdtBmsPackTextSensor::on_status_data(uint8_t pack, const StatusFrame &data)
 void TdtBmsPackTextSensor::on_info_data(uint8_t pack, const InfoFrame &data) {
   if (pack != this->pack_) return;
   publish(this->firmware_version_, std::string(data.firmware_version));
+  if (this->bms_mode_flags_ != nullptr) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "0x%04X / 0x%04X", data.bms_mode_f, data.bms_mode_f1);
+    publish(this->bms_mode_flags_, std::string(buf));
+  }
 }
 
 void TdtBmsPackTextSensor::on_pack_offline(uint8_t pack) {
@@ -138,6 +143,7 @@ void TdtBmsPackTextSensor::dump_config() {
   LOG_TEXT_SENSOR("  ", "Active Faults", this->active_faults_);
   LOG_TEXT_SENSOR("  ", "Firmware Version", this->firmware_version_);
   LOG_TEXT_SENSOR("  ", "Balancing Cells", this->balancing_cells_);
+  LOG_TEXT_SENSOR("  ", "BMS Mode Flags", this->bms_mode_flags_);
 }
 
 }  // namespace tdt_bms

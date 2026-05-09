@@ -94,6 +94,14 @@ struct AnalogFrame {
   // reports no temperature sensors.
   float temperature_high_C;
   float temperature_low_C;
+
+  // Active-balance block — populated only when BMS_MODE_F bit 1 is set;
+  // otherwise all four fields stay 0 and `active_balance_valid` is false.
+  bool active_balance_valid;
+  float active_balance_current_A;
+  float active_balance_target_V;
+  uint16_t emergency_mode_minutes;
+  float equipment_voltage_V;
 };
 
 // Decoded alarm/status (CID2=0x44) data for one pack.

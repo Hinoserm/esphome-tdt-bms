@@ -86,6 +86,10 @@ sensor:
     avg_cell_voltage: { name: "Pack 1 Avg Cell Voltage" }
     temperature_high: { name: "Pack 1 Temperature High" }
     temperature_low: { name: "Pack 1 Temperature Low" }
+    active_balance_current: { name: "Pack 1 Active Balance Current" }
+    active_balance_target_voltage: { name: "Pack 1 Active Balance Target Voltage" }
+    emergency_mode_timer: { name: "Pack 1 Emergency Mode Timer" }
+    equipment_voltage: { name: "Pack 1 Equipment Voltage" }
     cell_voltage_1:  { name: "Pack 1 Cell 1" }
     cell_voltage_2:  { name: "Pack 1 Cell 2" }
     cell_voltage_3:  { name: "Pack 1 Cell 3" }
@@ -131,6 +135,10 @@ sensor:
     avg_cell_voltage: { name: "Pack 2 Avg Cell Voltage" }
     temperature_high: { name: "Pack 2 Temperature High" }
     temperature_low: { name: "Pack 2 Temperature Low" }
+    active_balance_current: { name: "Pack 2 Active Balance Current" }
+    active_balance_target_voltage: { name: "Pack 2 Active Balance Target Voltage" }
+    emergency_mode_timer: { name: "Pack 2 Emergency Mode Timer" }
+    equipment_voltage: { name: "Pack 2 Equipment Voltage" }
     cell_voltage_1:  { name: "Pack 2 Cell 1" }
     cell_voltage_2:  { name: "Pack 2 Cell 2" }
     cell_voltage_3:  { name: "Pack 2 Cell 3" }
@@ -226,6 +234,7 @@ text_sensor:
     active_faults: { name: "Pack 1 Active Faults" }
     firmware_version: { name: "Pack 1 Firmware Version" }
     balancing_cells: { name: "Pack 1 Balancing Cells" }
+    bms_mode_flags: { name: "Pack 1 BMS Mode Flags" }
 
   - platform: tdt_bms
     tdt_bms_id: bms
@@ -237,3 +246,4 @@ text_sensor:
     active_faults: { name: "Pack 2 Active Faults" }
     firmware_version: { name: "Pack 2 Firmware Version" }
     balancing_cells: { name: "Pack 2 Balancing Cells" }
+    bms_mode_flags: { name: "Pack 2 BMS Mode Flags" }

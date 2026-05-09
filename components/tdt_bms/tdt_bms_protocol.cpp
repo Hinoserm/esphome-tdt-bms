@@ -207,6 +207,51 @@ bool parse_analog(const uint8_t *info, size_t info_chars, uint16_t bms_mode_f, A
   uint16_t bal_lo = read_word(info, o); o += 4;
   out.balance_bitmap = (uint32_t(bal_hi) << 16) | bal_lo;
 
+  // Active-balance block. Layout in the info field is:
+  //   info[o..o+4)    4 unidentified pad bytes (observed as 0x00,0x00,0x00,0x06
+  //                   in captures regardless of BMS_MODE_F state — likely a
+  //                   firmware-internal frame separator)
+  //   info[o+4..o+20) 4 ASCII-hex words for the active-balance fields
+  // We always advance past the 20 chars so trailing fields land at the right
+  // reverse offsets. Field decoding only happens when BMS_MODE_F bit 1 is set;
+  // otherwise the words are unspecified and stay zero.
+  out.active_balance_valid = false;
+  out.active_balance_current_A = 0.0f;
+  out.active_balance_target_V = 0.0f;
+  out.emergency_mode_minutes = 0;
+  out.equipment_voltage_V = 0.0f;
+
+  if (o + 20 <= info_chars) {
+    if (bms_mode_f & 0x02) {
+      const size_t ab = o + 4;  // skip the 4 pad bytes before the ASCII words
+
+      // ZD_JHDL — balance current. Treated as a signed int16; bit 15 is the
+      // sign bit and the value is in 0.01 A units.
+      int16_t jhdl = read_sword(info, ab + 0);
+      out.active_balance_current_A = float(jhdl) * 0.01f;
+
+      // ZD_JZDY — balance target voltage. Bit 15 set means the firmware has no
+      // valid target; otherwise bits 13:0 carry the target in millivolts.
+      uint16_t jzdy = read_word(info, ab + 4);
+      if ((jzdy & 0x8000) == 0) {
+        out.active_balance_target_V = float(jzdy & 0x3FFF) * 0.001f;
+      }
+
+      // EMER_USE — emergency-mode timer in whole minutes. 0 means disabled.
+      out.emergency_mode_minutes = read_word(info, ab + 8);
+
+      // equi_Current_vr — equipment voltage measurement. Same bit-15-invalid
+      // convention as the target voltage.
+      uint16_t equi = read_word(info, ab + 12);
+      if ((equi & 0x8000) == 0) {
+        out.equipment_voltage_V = float(equi & 0x3FFF) * 0.001f;
+      }
+
+      out.active_balance_valid = true;
+    }
+    o += 20;
+  }
+
   // Trailing fields are read backwards from the end of the info field. Some firmware
   // emits raw binary bytes mid-info around the active-balance slot, so sequential parsing
   // past this point can land on non-ASCII bytes; reverse-indexed reads avoid that.

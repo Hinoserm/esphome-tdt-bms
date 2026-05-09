@@ -26,7 +26,9 @@ bool TdtBmsPackSensor::any_sensor_set_() const {
       this->insulation_resistance_sensor_ || this->bms_self_consumption_sensor_ ||
       this->min_cell_voltage_sensor_ || this->max_cell_voltage_sensor_ ||
       this->cell_voltage_delta_sensor_ || this->avg_cell_voltage_sensor_ ||
-      this->temperature_high_sensor_ || this->temperature_low_sensor_) {
+      this->temperature_high_sensor_ || this->temperature_low_sensor_ ||
+      this->active_balance_current_sensor_ || this->active_balance_target_voltage_sensor_ ||
+      this->emergency_mode_timer_sensor_ || this->equipment_voltage_sensor_) {
     return true;
   }
   for (auto *s : this->cell_voltage_sensors_) if (s) return true;
@@ -68,6 +70,21 @@ void TdtBmsPackSensor::on_analog_data(uint8_t pack, const AnalogFrame &data) {
     publish(this->temperature_high_sensor_, data.temperature_high_C);
     publish(this->temperature_low_sensor_, data.temperature_low_C);
   }
+
+  // Active-balance fields are only meaningful when BMS_MODE_F bit 1 is set.
+  // When invalid (firmware doesn't expose them) we leave the sensors at NaN
+  // so HA shows them as unavailable rather than as a stale 0.
+  if (data.active_balance_valid) {
+    publish(this->active_balance_current_sensor_, data.active_balance_current_A);
+    publish(this->active_balance_target_voltage_sensor_, data.active_balance_target_V);
+    publish(this->emergency_mode_timer_sensor_, float(data.emergency_mode_minutes));
+    publish(this->equipment_voltage_sensor_, data.equipment_voltage_V);
+  } else {
+    publish_nan(this->active_balance_current_sensor_);
+    publish_nan(this->active_balance_target_voltage_sensor_);
+    publish_nan(this->emergency_mode_timer_sensor_);
+    publish_nan(this->equipment_voltage_sensor_);
+  }
 }
 
 void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
@@ -91,6 +108,10 @@ void TdtBmsPackSensor::on_pack_offline(uint8_t pack) {
   publish_nan(this->avg_cell_voltage_sensor_);
   publish_nan(this->temperature_high_sensor_);
   publish_nan(this->temperature_low_sensor_);
+  publish_nan(this->active_balance_current_sensor_);
+  publish_nan(this->active_balance_target_voltage_sensor_);
+  publish_nan(this->emergency_mode_timer_sensor_);
+  publish_nan(this->equipment_voltage_sensor_);
   for (auto *s : this->cell_voltage_sensors_) publish_nan(s);
   for (auto *s : this->temperature_sensors_) publish_nan(s);
 }
@@ -115,6 +136,10 @@ void TdtBmsPackSensor::dump_config() {
   LOG_SENSOR("  ", "Average Cell Voltage", this->avg_cell_voltage_sensor_);
   LOG_SENSOR("  ", "Temperature High", this->temperature_high_sensor_);
   LOG_SENSOR("  ", "Temperature Low", this->temperature_low_sensor_);
+  LOG_SENSOR("  ", "Active Balance Current", this->active_balance_current_sensor_);
+  LOG_SENSOR("  ", "Active Balance Target Voltage", this->active_balance_target_voltage_sensor_);
+  LOG_SENSOR("  ", "Emergency Mode Timer", this->emergency_mode_timer_sensor_);
+  LOG_SENSOR("  ", "Equipment Voltage", this->equipment_voltage_sensor_);
   for (uint8_t i = 0; i < MAX_CELLS; i++) {
     if (this->cell_voltage_sensors_[i] != nullptr) {
       LOG_SENSOR("  ", "Cell Voltage", this->cell_voltage_sensors_[i]);

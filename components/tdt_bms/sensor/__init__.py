@@ -158,6 +158,35 @@ SENSORS = {
         device_class=DEVICE_CLASS_TEMPERATURE,
         state_class=STATE_CLASS_MEASUREMENT,
     ),
+    # Active-balance fields, populated only when BMS_MODE_F bit 1 is set on
+    # the target firmware. Sensors stay unavailable on firmware that doesn't
+    # expose them.
+    "active_balance_current": dict(
+        unit_of_measurement=UNIT_AMPERE,
+        accuracy_decimals=2,
+        device_class=DEVICE_CLASS_CURRENT,
+        state_class=STATE_CLASS_MEASUREMENT,
+    ),
+    "active_balance_target_voltage": dict(
+        unit_of_measurement=UNIT_VOLT,
+        accuracy_decimals=3,
+        device_class=DEVICE_CLASS_VOLTAGE,
+        state_class=STATE_CLASS_MEASUREMENT,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+    ),
+    "emergency_mode_timer": dict(
+        unit_of_measurement="min",
+        accuracy_decimals=0,
+        state_class=STATE_CLASS_MEASUREMENT,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+    ),
+    "equipment_voltage": dict(
+        unit_of_measurement=UNIT_VOLT,
+        accuracy_decimals=3,
+        device_class=DEVICE_CLASS_VOLTAGE,
+        state_class=STATE_CLASS_MEASUREMENT,
+        entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+    ),
 }
 
 CELLS = [f"cell_voltage_{i}" for i in range(1, 17)]

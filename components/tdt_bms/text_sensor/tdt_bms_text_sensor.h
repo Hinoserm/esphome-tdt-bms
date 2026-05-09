@@ -34,6 +34,7 @@ class TdtBmsPackTextSensor : public TdtBmsListener {
   void set_active_faults_text_sensor(text_sensor::TextSensor *s) { active_faults_ = s; }
   void set_firmware_version_text_sensor(text_sensor::TextSensor *s) { firmware_version_ = s; }
   void set_balancing_cells_text_sensor(text_sensor::TextSensor *s) { balancing_cells_ = s; }
+  void set_bms_mode_flags_text_sensor(text_sensor::TextSensor *s) { bms_mode_flags_ = s; }
 
  protected:
   uint8_t pack_;
@@ -44,6 +45,7 @@ class TdtBmsPackTextSensor : public TdtBmsListener {
   text_sensor::TextSensor *active_faults_{nullptr};
   text_sensor::TextSensor *firmware_version_{nullptr};
   text_sensor::TextSensor *balancing_cells_{nullptr};
+  text_sensor::TextSensor *bms_mode_flags_{nullptr};
 };
 
 }  // namespace tdt_bms

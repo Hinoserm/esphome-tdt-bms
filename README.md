@@ -10,9 +10,7 @@ Multi-pack chains are supported: when several packs are linked through their int
 - ESP32-S3-DevKitC-1 with W5500 ethernet, ESP-IDF framework
 - ESPHome 2026.4.4 / 2026.4.5
 
-Validated end-to-end on live hardware: cell voltages, pack voltage / current / power, capacity (remaining / full / design), cycle count, SOC / SOH, insulation resistance, BMS self-consumption, all six temperature channels plus per-pack hot-spot / cold-spot, MOSFET states, all rolled-up protection / warning / fault flags, battery mode, chemistry, balancer activity (rolled-up + per-cell + comma-separated cell list), and per-pack firmware version.
-
-Active-balance current / target / equipment-voltage fields (gated on `BMS_MODE_F & 0x02`) are deferred — they aren't surfaced as sensors yet because the validated firmware doesn't emit them. If your firmware sets that flag and you'd like those exposed, open an issue.
+Validated end-to-end on live hardware: cell voltages, pack voltage / current / power, capacity (remaining / full / design), cycle count, SOC / SOH, insulation resistance, BMS self-consumption, all six temperature channels plus per-pack hot-spot / cold-spot, MOSFET states, all rolled-up protection / warning / fault flags, battery mode, chemistry, balancer activity (rolled-up + per-cell + comma-separated cell list), per-pack firmware version, `BMS_MODE_F` flag word (raw hex), and the active-balance block (current, target voltage, emergency-mode timer, equipment voltage) when the firmware exposes it.
 
 ## Hardware requirements
 
@@ -125,6 +123,8 @@ See [`example.yaml`](example.yaml) for a full reference covering both packs and 
 
 **Pack-level**: `pack_voltage`, `pack_current`, `pack_power`, `cpu_voltage`, `remaining_capacity`, `full_capacity`, `design_capacity`, `cycle_count`, `state_of_charge`, `state_of_health`, `insulation_resistance`, `bms_self_consumption`, `min_cell_voltage`, `max_cell_voltage`, `cell_voltage_delta`, `avg_cell_voltage`, `temperature_high`, `temperature_low`
 
+**Active-balance** (only populated when `BMS_MODE_F` bit 1 is set; otherwise the sensors stay unavailable): `active_balance_current`, `active_balance_target_voltage`, `emergency_mode_timer`, `equipment_voltage`
+
 The per-pack current scale is auto-detected at boot from the BMS firmware-info word (CID2=0xC1). On firmware variants with the high-current scale flag set, readings are correctly interpreted as 0.1 A per LSB; on default firmware they are interpreted as 0.01 A per LSB.
 
 **Per-cell**: `cell_voltage_1` … `cell_voltage_16`
@@ -144,6 +144,7 @@ The per-pack current scale is auto-detected at boot from the BMS firmware-info w
 - `active_protections`, `active_warnings`, `active_faults` — comma-separated lists of currently-tripped flag names
 - `balancing_cells` — comma-separated 1-based list of cells currently balancing (empty when none)
 - `firmware_version` — pack firmware/board version string (read once at boot)
+- `bms_mode_flags` — raw hex of `BMS_MODE_F / BMS_MODE_F1` flag words (diagnostic, e.g. `"0x03CE / 0x0000"`)
 
 ## Notes
 

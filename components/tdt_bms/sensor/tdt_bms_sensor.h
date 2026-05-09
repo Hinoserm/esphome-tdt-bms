@@ -45,6 +45,10 @@ class TdtBmsPackSensor : public TdtBmsListener {
   SUB_SENSOR(avg_cell_voltage)
   SUB_SENSOR(temperature_high)
   SUB_SENSOR(temperature_low)
+  SUB_SENSOR(active_balance_current)
+  SUB_SENSOR(active_balance_target_voltage)
+  SUB_SENSOR(emergency_mode_timer)
+  SUB_SENSOR(equipment_voltage)
 
  protected:
   bool any_sensor_set_() const;

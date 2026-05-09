@@ -49,8 +49,6 @@ class TdtBmsPackSensor : public TdtBmsListener {
   SUB_SENSOR(active_balance_target_voltage)
   SUB_SENSOR(emergency_mode_timer)
   SUB_SENSOR(equipment_voltage)
-  SUB_SENSOR(time_to_empty)
-  SUB_SENSOR(time_to_full)
 
  protected:
   bool any_sensor_set_() const;
